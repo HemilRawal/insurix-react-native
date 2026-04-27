@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { collection, getDocs, doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '../config/firebase';
 import { COLORS, RADIUS } from '../config/theme';
+import { useChat } from '../context/ChatContext';
 import { getRecommendedPlans } from '../utils/recommendationEngine';
 import { SAMPLE_PLANS } from '../utils/seedFirestore';
 
@@ -11,6 +12,7 @@ export default function PlansScreen({ navigation }) {
   const [plans, setPlans] = useState([]);
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
+  const { triggerBotMessage } = useChat();
 
   useEffect(() => { loadPlans(); }, []);
 
@@ -38,7 +40,17 @@ export default function PlansScreen({ navigation }) {
     }
   };
 
-  const openDetail = (plan) => { setSelectedPlan(plan); setModalVisible(true); };
+  const openDetail = (plan) => { 
+    setSelectedPlan(plan); 
+    setModalVisible(true); 
+    
+    setTimeout(() => {
+      triggerBotMessage(
+        `Great choice! The ${plan.title} plan offers ${plan.coverageLimit} coverage and a claim ratio of ${plan.claimRatio}%. Would you like a quick breakdown of the benefits?`,
+        ['Yes, breakdown', 'Compare Plans']
+      );
+    }, 500);
+  };
 
   const getTierColor = (plan) => {
     if (plan.isBestMatch) return COLORS.primary;

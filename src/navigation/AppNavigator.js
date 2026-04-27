@@ -1,9 +1,12 @@
-import React from 'react';
+import React, { useState, useRef } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../config/theme';
+import { ChatProvider } from '../context/ChatContext';
+import FloatingChatIcon from '../components/FloatingChatIcon';
+import ChatWindow from '../components/ChatWindow';
 
 import SplashScreen from '../screens/SplashScreen';
 import LoginScreen from '../screens/LoginScreen';
@@ -64,17 +67,41 @@ function MainTabs() {
 }
 
 export default function AppNavigator() {
+  const [currentRouteName, setCurrentRouteName] = useState('Splash');
+  const navigationRef = useRef();
+
+  const hiddenRoutes = ['Splash', 'Login', 'Signup', 'ProfileSetup', 'HealthDetails', 'RiskResults'];
+  const showChatbot = !hiddenRoutes.includes(currentRouteName);
+
   return (
-    <NavigationContainer>
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="Splash" component={SplashScreen} />
-        <Stack.Screen name="Login" component={LoginScreen} />
-        <Stack.Screen name="Signup" component={SignupScreen} />
-        <Stack.Screen name="ProfileSetup" component={ProfileSetupScreen} />
-        <Stack.Screen name="HealthDetails" component={HealthDetailsScreen} />
-        <Stack.Screen name="RiskResults" component={RiskResultsScreen} />
-        <Stack.Screen name="MainTabs" component={MainTabs} />
-      </Stack.Navigator>
-    </NavigationContainer>
+    <ChatProvider>
+      <NavigationContainer
+        ref={navigationRef}
+        onReady={() => {
+          setCurrentRouteName(navigationRef.current.getCurrentRoute().name);
+        }}
+        onStateChange={() => {
+          const previousRouteName = currentRouteName;
+          const currentRouteNameNew = navigationRef.current.getCurrentRoute().name;
+
+          if (previousRouteName !== currentRouteNameNew) {
+            setCurrentRouteName(currentRouteNameNew);
+          }
+        }}
+      >
+        <Stack.Navigator screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="Splash" component={SplashScreen} />
+          <Stack.Screen name="Login" component={LoginScreen} />
+          <Stack.Screen name="Signup" component={SignupScreen} />
+          <Stack.Screen name="ProfileSetup" component={ProfileSetupScreen} />
+          <Stack.Screen name="HealthDetails" component={HealthDetailsScreen} />
+          <Stack.Screen name="RiskResults" component={RiskResultsScreen} />
+          <Stack.Screen name="MainTabs" component={MainTabs} />
+        </Stack.Navigator>
+      </NavigationContainer>
+
+      {showChatbot && <FloatingChatIcon />}
+      {showChatbot && <ChatWindow />}
+    </ChatProvider>
   );
 }

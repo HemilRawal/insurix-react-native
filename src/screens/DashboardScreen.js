@@ -5,10 +5,24 @@ import Svg, { Circle } from 'react-native-svg';
 import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '../config/firebase';
 import { COLORS, RADIUS } from '../config/theme';
+import { useChat } from '../context/ChatContext';
 
 export default function DashboardScreen({ navigation }) {
   const [user, setUser] = useState(null);
-  useEffect(() => { loadUser(); }, []);
+  const { triggerBotMessage } = useChat();
+  
+  useEffect(() => { 
+    loadUser(); 
+    
+    const timer = setTimeout(() => {
+      triggerBotMessage(
+        "Reminder: Your Premium Health Shield renewal is coming up in 42 days. Would you like to lock in your current rate now?",
+        ['Lock Rate Now', 'Remind Me Later']
+      );
+    }, 1500);
+    
+    return () => clearTimeout(timer);
+  }, []);
 
   const loadUser = async () => {
     try {
