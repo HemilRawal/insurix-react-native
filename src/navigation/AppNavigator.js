@@ -18,6 +18,8 @@ import DashboardScreen from '../screens/DashboardScreen';
 import PlansScreen from '../screens/PlansScreen';
 import ComparePlansScreen from '../screens/ComparePlansScreen';
 import ProfileScreen from '../screens/ProfileScreen';
+import DependentsScreen from '../screens/DependentsScreen';
+import NewClaimScreen from '../screens/NewClaimScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -97,6 +99,8 @@ export default function AppNavigator() {
           <Stack.Screen name="HealthDetails" component={HealthDetailsScreen} />
           <Stack.Screen name="RiskResults" component={RiskResultsScreen} />
           <Stack.Screen name="MainTabs" component={MainTabs} />
+          <Stack.Screen name="Dependents" component={DependentsScreen} />
+          <Stack.Screen name="NewClaim" component={NewClaimScreen} />
         </Stack.Navigator>
       </NavigationContainer>
 

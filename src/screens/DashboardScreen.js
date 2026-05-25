@@ -71,20 +71,37 @@ export default function DashboardScreen({ navigation }) {
           </View>
           <TouchableOpacity style={s.outBtn}><Text style={s.outBtnT}>Lock Current Rate</Text></TouchableOpacity></View>
 
-        <View style={s.card}>
-          <View style={{flexDirection:'row',justifyContent:'space-between',width:'100%'}}>
-            <Text style={s.cardT}>Recent Claim</Text><TouchableOpacity><Text style={s.link}>View →</Text></TouchableOpacity></View>
-          <View style={s.claimRow}>
-            <View style={s.claimIc}><Ionicons name="medkit" size={20} color={COLORS.primary}/></View>
-            <View style={{flex:1}}><Text style={{fontWeight:'600',fontSize:14}}>Dental Cleaning</Text><Text style={{fontSize:11,color:COLORS.outline}}>ID: #CLM-81821</Text></View>
-            <View style={{alignItems:'flex-end'}}><View style={s.appBadge}><Text style={s.appBadgeT}>Approved</Text></View><Text style={{fontWeight:'700',fontSize:14,marginTop:4}}>₹18,000</Text></View>
+        {user?.recentClaim ? (
+          <View style={s.card}>
+            <View style={{flexDirection:'row',justifyContent:'space-between',width:'100%'}}>
+              <Text style={s.cardT}>Recent Claim</Text><TouchableOpacity><Text style={s.link}>View →</Text></TouchableOpacity></View>
+            <View style={s.claimRow}>
+              <View style={s.claimIc}><Ionicons name="medkit" size={20} color={COLORS.primary}/></View>
+              <View style={{flex:1}}><Text style={{fontWeight:'600',fontSize:14}}>{user.recentClaim.diagnosis || 'Claim'}</Text><Text style={{fontSize:11,color:COLORS.outline}}>ID: #{user.recentClaim.id}</Text></View>
+              <View style={{alignItems:'flex-end'}}><View style={s.appBadge}><Text style={s.appBadgeT}>{user.recentClaim.status}</Text></View><Text style={{fontWeight:'700',fontSize:14,marginTop:4}}>₹{user.recentClaim.amount}</Text></View>
+            </View>
+            {user.recentClaim.status === 'Approved' && (
+              <Text style={{fontSize: 12, color: COLORS.tertiary, marginTop: 12, fontWeight: '600'}}>
+                ✓ Account to be credited in 10 business days
+              </Text>
+            )}
           </View>
-        </View>
+        ) : (
+          <View style={s.card}>
+            <View style={{flexDirection:'row',justifyContent:'space-between',width:'100%'}}>
+              <Text style={s.cardT}>Recent Claim</Text><TouchableOpacity onPress={() => navigation.navigate('NewClaim')}><Text style={s.link}>Create →</Text></TouchableOpacity></View>
+            <Text style={s.cardSub}>No recent claims found.</Text>
+          </View>
+        )}
 
         <Text style={{fontSize:18,fontWeight:'700',marginBottom:12}}>Manage Account</Text>
         <View style={s.tiles}>
-          {[{i:'add-circle-outline',l:'New Claim'},{i:'headset',l:'Live Support'},{i:'document-text-outline',l:'Documents'},{i:'people-outline',l:'Dependents'}].map(t=>(
-            <TouchableOpacity key={t.l} style={s.tile}><Ionicons name={t.i} size={28} color={COLORS.primary}/><Text style={s.tileT}>{t.l}</Text></TouchableOpacity>))}
+          {[{i:'add-circle-outline',l:'New Claim', nav: 'NewClaim'},{i:'people-outline',l:'Dependents', nav: 'Dependents'}].map(t=>(
+            <TouchableOpacity key={t.l} style={s.tile} onPress={() => navigation.navigate(t.nav)}>
+              <Ionicons name={t.i} size={28} color={COLORS.primary}/>
+              <Text style={s.tileT}>{t.l}</Text>
+            </TouchableOpacity>
+          ))}
         </View>
 
         <View style={s.wellness}><Text style={s.wTag}>WELLNESS BONUS</Text><Text style={s.wTitle}>Daily Activity Goal</Text>

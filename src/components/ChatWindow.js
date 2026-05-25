@@ -9,23 +9,38 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Alert,
 } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
   withTiming,
+  withRepeat,
   runOnJS,
 } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { useChat } from '../context/ChatContext';
 import { COLORS, FONTS, SPACING, RADIUS } from '../config/theme';
 
+// Try to import expo-speech-recognition; gracefully degrade if unavailable
+let ExpoSpeechRecognitionModule = null;
+let useSpeechRecognitionEvent = null;
+try {
+  const speechModule = require('expo-speech-recognition');
+  ExpoSpeechRecognitionModule = speechModule.ExpoSpeechRecognitionModule;
+  useSpeechRecognitionEvent = speechModule.useSpeechRecognitionEvent;
+} catch (e) {
+  // Not available (e.g. in Expo Go without dev build)
+}
+
 export default function ChatWindow() {
   const { isOpen, toggleChat, messages, sendMessage } = useChat();
   const [inputText, setInputText] = useState('');
+  const [isListening, setIsListening] = useState(false);
   const translateY = useSharedValue(1000);
   const opacity = useSharedValue(0);
+  const micPulse = useSharedValue(1);
   const flatListRef = useRef(null);
 
   useEffect(() => {
@@ -40,6 +55,71 @@ export default function ChatWindow() {
       opacity.value = withTiming(0, { duration: 300 });
     }
   }, [isOpen]);
+
+  // Mic pulse animation while listening
+  useEffect(() => {
+    if (isListening) {
+      micPulse.value = withRepeat(
+        withTiming(1.3, { duration: 600 }),
+        -1,
+        true
+      );
+    } else {
+      micPulse.value = withTiming(1, { duration: 200 });
+    }
+  }, [isListening]);
+
+  // Wire up speech recognition events if the module is available
+  if (useSpeechRecognitionEvent) {
+    useSpeechRecognitionEvent('result', (event) => {
+      const transcript = event.results?.[0]?.transcript;
+      if (transcript) {
+        setInputText(transcript);
+      }
+    });
+
+    useSpeechRecognitionEvent('end', () => {
+      setIsListening(false);
+    });
+
+    useSpeechRecognitionEvent('error', (event) => {
+      setIsListening(false);
+      console.log('Speech recognition error:', event.error);
+    });
+  }
+
+  const handleMicPress = async () => {
+    if (!ExpoSpeechRecognitionModule) {
+      Alert.alert(
+        "Speech Recognition",
+        "Speech-to-text requires a development build. To enable it:\n\n1. Run: npx expo prebuild\n2. Run: npx expo run:android\n\nFor now, please type your message.",
+        [{ text: "OK" }]
+      );
+      return;
+    }
+
+    if (isListening) {
+      // Stop listening
+      ExpoSpeechRecognitionModule.stop();
+      setIsListening(false);
+      return;
+    }
+
+    // Request permissions
+    const result = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
+    if (!result.granted) {
+      Alert.alert("Permission Required", "Microphone permission is needed for speech-to-text.");
+      return;
+    }
+
+    // Start listening
+    setIsListening(true);
+    ExpoSpeechRecognitionModule.start({
+      lang: 'en-US',
+      interimResults: true,
+      maxAlternatives: 1,
+    });
+  };
 
   const handleSend = () => {
     if (inputText.trim()) {
@@ -56,6 +136,12 @@ export default function ChatWindow() {
     return {
       transform: [{ translateY: translateY.value }],
       opacity: opacity.value,
+    };
+  });
+
+  const micAnimatedStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ scale: micPulse.value }],
     };
   });
 
@@ -131,13 +217,29 @@ export default function ChatWindow() {
           onLayout={() => flatListRef.current?.scrollToEnd({ animated: true })}
         />
 
+        {isListening && (
+          <View style={styles.listeningBar}>
+            <Ionicons name="mic" size={16} color={COLORS.error} />
+            <Text style={styles.listeningText}>Listening... Tap mic to stop</Text>
+          </View>
+        )}
+
         <View style={styles.inputContainer}>
-          <TouchableOpacity style={styles.micButton}>
-            <Ionicons name="mic-outline" size={24} color={COLORS.outline} />
-          </TouchableOpacity>
+          <Animated.View style={micAnimatedStyle}>
+            <TouchableOpacity 
+              style={[styles.micButton, isListening && styles.micButtonActive]} 
+              onPress={handleMicPress}
+            >
+              <Ionicons 
+                name={isListening ? "mic" : "mic-outline"} 
+                size={24} 
+                color={isListening ? COLORS.error : COLORS.outline} 
+              />
+            </TouchableOpacity>
+          </Animated.View>
           <TextInput
             style={styles.input}
-            placeholder="Type a message..."
+            placeholder={isListening ? "Listening..." : "Type a message..."}
             placeholderTextColor={COLORS.outline}
             value={inputText}
             onChangeText={setInputText}
@@ -258,6 +360,19 @@ const styles = StyleSheet.create({
     ...FONTS.labelBold,
     fontSize: 13,
   },
+  listeningBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    backgroundColor: 'rgba(186,26,26,0.08)',
+    gap: 8,
+  },
+  listeningText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: COLORS.error,
+  },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -270,6 +385,10 @@ const styles = StyleSheet.create({
   micButton: {
     padding: SPACING.sm,
     marginRight: SPACING.xs,
+  },
+  micButtonActive: {
+    backgroundColor: 'rgba(186,26,26,0.1)',
+    borderRadius: 20,
   },
   input: {
     flex: 1,
